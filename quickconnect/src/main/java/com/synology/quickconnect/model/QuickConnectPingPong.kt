@@ -5,6 +5,6 @@ import com.squareup.moshi.Json
 data class QuickConnectPingPong(
     @Json(name = "success")
     val success: Boolean,
-    @Json(name = "szid")
+    @Json(name = "ezid")
     val eZid: String,
 )
