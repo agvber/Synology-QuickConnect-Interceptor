@@ -2,14 +2,15 @@ package com.synology.quickconnect.network
 
 import com.squareup.moshi.Moshi
 import com.synology.quickconnect.JSON_MIM_TYPE
+import com.synology.quickconnect.addTunnelTypeHeader
 import com.synology.quickconnect.model.QuickConnectPingPong
 import com.synology.quickconnect.model.ServerInfo
 import com.synology.quickconnect.model.ServerInfoRequestBody
+import com.synology.quickconnect.toDto
 import okhttp3.MediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
-import okhttp3.Response
 
 internal class SynologyNetwork(
     private val client: OkHttpClient,
@@ -21,6 +22,7 @@ internal class SynologyNetwork(
         quickConnectId: String
     ): ServerInfo {
         val request = Request.Builder()
+            .addTunnelTypeHeader()
             .url(url)
             .post(
                 RequestBody.create(
@@ -42,7 +44,10 @@ internal class SynologyNetwork(
     fun pinPongQuickConnectUrl(
         url: String
     ): QuickConnectPingPong {
-        val request = Request.Builder().url(url).build()
+        val request = Request.Builder()
+            .addTunnelTypeHeader()
+            .url(url)
+            .build()
         val response: QuickConnectPingPong
 
         client.newCall(request).execute().use {
@@ -50,13 +55,6 @@ internal class SynologyNetwork(
         }
 
         return response
-    }
-
-    private fun <T> Response.toDto(moshi: Moshi, type: Class<T>): T? {
-        return moshi
-            .adapter(type)
-            .lenient()
-            .fromJson(body()?.source() ?: return null)
     }
 
 }
