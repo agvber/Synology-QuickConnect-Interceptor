@@ -15,8 +15,9 @@ class QuickConnectInterceptor : Interceptor {
         val request = chain.request()
         val quickConnectId = request.url().host()
 
-        if (request.header(QUICK_CONNECT_BASE_URL) != "true") {
-            return chain.proceed(request)
+        if (request.header(QUICK_CONNECT_HEADER) != "true") {
+            val newRequest = request.newBuilder().removeHeader(QUICK_CONNECT_HEADER).build()
+            return chain.proceed(newRequest)
         }
 
         if (!MemoryStorage.isInvalidData(quickConnectId)) {
@@ -24,14 +25,17 @@ class QuickConnectInterceptor : Interceptor {
             return chain.proceed(newRequest)
         }
 
-        return chain.proceed(request.rebuildQuickConnect(quickConnectId))
+        val quickConnectUrl = getQuickConnectUrl(quickConnectId)
+        saveMemoryStorage(quickConnectId, quickConnectUrl)
+        return chain.proceed(request.transformQuickConnect(quickConnectUrl))
     }
 
-    private fun Request.rebuildQuickConnect(id: String): Request {
-        val serverInfo = checkServerInfo(network.getServerInfo(GLOBAL_QUICK_CONNECT_URL, id), id)
-        val host = "$id.${serverInfo.env!!.relayRegion!!}.$QUICK_CONNECT_BASE_URL"
-        saveMemoryStorage(id, host)
-        return transformQuickConnect(host)
+    private fun getQuickConnectUrl(id: String): String {
+        val serverInfo = getServerInfo(id)
+        val baseUrl = "$id.${serverInfo.env!!.relayRegion}.$QUICK_CONNECT_BASE_URL"
+
+        network.pinPongQuickConnectUrl("https://${baseUrl}" + PING_PONG_URL)
+        return baseUrl
     }
 
     private fun saveMemoryStorage(id: String, host: String) {
@@ -39,7 +43,9 @@ class QuickConnectInterceptor : Interceptor {
         MemoryStorage.serverHostName = host
     }
 
-    private fun checkServerInfo(serverInfo: ServerInfo, id: String): ServerInfo {
+    private fun getServerInfo(id: String): ServerInfo {
+        val serverInfo = network.getServerInfo(GLOBAL_QUICK_CONNECT_URL, id)
+
         if (serverInfo.env?.relayRegion == null) {
             return network.getServerInfo("https://${serverInfo.sites!!.first()}/Serv.php", id)
         }
@@ -51,7 +57,13 @@ class QuickConnectInterceptor : Interceptor {
             .host(host)
             .build()
         return newBuilder()
-            .addHeader("Cookie", "type=tunnel")
-            .url(url).build()
+            .addTunnelTypeHeader()
+            .url(url)
+            .removeHeader(QUICK_CONNECT_HEADER)
+            .build()
+    }
+
+    companion object {
+        const val QUICK_CONNECT_HEADER = "synology_quick_connect_id"
     }
 }
