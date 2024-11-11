@@ -67,7 +67,7 @@ private interface NetworkDataSource {
 
     @GET("/webapi/query.cgi")
     suspend fun getApiInfo(
-        @Header(QuickConnectInterceptor.QUICK_CONNECT_HEADER) header: String = "false",
+        @Header(QuickConnectInterceptor.QUICK_CONNECT_HEADER) header: String = "true",
         @Query("api") api: String = "SYNO.API.Info",
         @Query("version") version: Int = 1,
         @Query("method") method: String = "query",
